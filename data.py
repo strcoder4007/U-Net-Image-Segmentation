@@ -5,9 +5,11 @@ from datasets import load_dataset
 
 
 image_size = 512
+save_location = 'datasets/'
 
 def load_and_save_dataset():
     # Get data from Hugging face
+    print('Downloading Dataset...')
     master_dataset = load_dataset("rainerberger/Mri_segmentation")
 
     train_dataset = master_dataset['train']
@@ -29,13 +31,13 @@ def load_and_save_dataset():
         train_imgs[i] = img
         train_imgs_mask[i] = img_mask
 
-        if i%100 == 0:
+        if i%50 == 0:
             print('Done: {0}/{1} images'.format(i, train_total))
 
     print('Training images load complete.')
 
-    np.save('train_imgs.npy', train_imgs)
-    np.save('train_imgs_mask.npy', train_imgs_mask)
+    np.save(save_location + 'train_imgs.npy', train_imgs)
+    np.save(save_location + 'train_imgs_mask.npy', train_imgs_mask)
 
     print('Saving to .npy files complete.')
 
@@ -50,27 +52,27 @@ def load_and_save_dataset():
         test_imgs[i] = img
         test_imgs_mask[i] = img_mask
 
-        if i%100 == 0:
+        if i%50 == 0:
             print('Done: {0}/{1} images'.format(i, test_total))
 
     print('Testing images load complete.')
 
-    np.save('test_imgs.npy', test_imgs)
-    np.save('test_imgs_mask.npy', test_imgs_mask)
+    np.save(save_location + 'test_imgs.npy', test_imgs)
+    np.save(save_location + 'test_imgs_mask.npy', test_imgs_mask)
 
     print('Saving to .npy files complete.')
 
 
     
 def load_train_data():
-    train_imgs = np.load('train_imgs.npy')
-    train_imgs_mask = np.load('train_imgs_mask.npy')
+    train_imgs = np.load(save_location + 'train_imgs.npy')
+    train_imgs_mask = np.load(save_location + 'train_imgs_mask.npy')
     return train_imgs, train_imgs_mask
 
 
 def load_test_data():
-    test_imgs = np.load('test_imgs.npy')
-    test_imgs_mask = np.load('test_imgs_mask.npy')
+    test_imgs = np.load(save_location + 'test_imgs.npy')
+    test_imgs_mask = np.load(save_location + 'test_imgs_mask.npy')
     return test_imgs, test_imgs_mask
 
 
