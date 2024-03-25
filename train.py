@@ -1,6 +1,10 @@
 import os
 import numpy as np
 import tensorflow as tf
+
+from skimage.transform import resize
+from skimage.io import imsave
+
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Concatenate, Conv2D, MaxPooling2D, Conv2DTranspose, Flatten
 from tensorflow.keras.optimizers import Adam
@@ -74,9 +78,55 @@ def dice_coef_loss(y_true, y_pred):
     return -dice_coef(y_true, y_pred)
 
 
+def preprocess_images(imgs):
+    processed_imgs = np.ndarray((imgs.shape[0], 512, 512), dtype=np.uint8)
+    for i in range(imgs.shape[0]):
+        processed_imgs[i] = resize(imgs[i], (512, 512), preserve_range=True)
+
+    processed_imgs = processed_imgs[..., np.newaxis]
+    return processed_imgs
+
+
+def normalize_images(imgs, mask):
+    imgs = imgs.astype('float32')
+    mean = np.mean(imgs)
+    std = np.std(imgs)
+
+    imgs = imgs-mean
+    imgs = imgs/std
+
+    mask = mask.astype('float32')
+    mask /= 255.
+
+    return imgs, mask
+
 
 
 def train():
+    train_imgs, train_imgs_mask = load_train_data()
+
+    train_imgs = preprocess_images(train_imgs)
+    train_imgs_mask = preprocess_images(train_imgs_mask)
+
+    train_imgs, train_imgs_mask = normalize_images(train_imgs, train_imgs_mask)
+
+    model = unet_model()
+
+    model_checkpoint = ModelCheckpoint('weights.h5', monitor='val_loss', save_best_only=True)
+
+    model.fit(train_imgs, 
+              train_imgs_mask, 
+              batch_size=32, 
+              nb_epoch=20, 
+              verbose=1, 
+              shuffle=True, 
+              validation_split=0.2, 
+              callbacks=[model_checkpoint])
+    
+    
+
+
+
     return 
 
 if __name__ == '__main__':

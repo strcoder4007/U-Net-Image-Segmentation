@@ -43,14 +43,14 @@ def load_and_save_dataset():
 
     # Processing testing images
     test_imgs = np.ndarray((test_total, image_size, image_size), dtype=np.uint8)
-    test_imgs_mask = np.ndarray((test_total, image_size, image_size), dtype=np.uint8)
+    test_imgs_id = np.ndarray((test_total, image_size, image_size), dtype=np.uint8)
 
     for i in range(len(test_dataset)):
         img = test_dataset[i]['image']
         img_mask = test_dataset[i]['annotation']
         
         test_imgs[i] = img
-        test_imgs_mask[i] = img_mask
+        test_imgs_id[i] = img_mask
 
         if i%50 == 0:
             print('Done: {0}/{1} images'.format(i, test_total))
@@ -58,7 +58,7 @@ def load_and_save_dataset():
     print('Testing images load complete.')
 
     np.save(save_location + 'test_imgs.npy', test_imgs)
-    np.save(save_location + 'test_imgs_mask.npy', test_imgs_mask)
+    np.save(save_location + 'test_imgs_id.npy', test_imgs_id)
 
     print('Saving to .npy files complete.')
 
@@ -72,8 +72,8 @@ def load_train_data():
 
 def load_test_data():
     test_imgs = np.load(save_location + 'test_imgs.npy')
-    test_imgs_mask = np.load(save_location + 'test_imgs_mask.npy')
-    return test_imgs, test_imgs_mask
+    test_imgs_id = np.load(save_location + 'test_imgs_id.npy')
+    return test_imgs, test_imgs_id
 
 
 if __name__ == '__main__':
