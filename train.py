@@ -38,23 +38,23 @@ def unet_model():
     conv5 = Conv2D(1024, (3, 3), activation='relu', padding='same')(conv5)
 
     # Expansive Layers
-    conv_transpose1 = Conv2DTranspose(512, (2, 2), padding='same')(conv5)
+    conv_transpose1 = Conv2DTranspose(512, (3, 3), strides=(2, 2), padding='same')(conv5)
     # dont quite understand this, concatenate should make the channel dimension 1024 making it impossible to convolve with 512 channel dims
     conv_cat1 = Concatenate(axis=3)([conv_transpose1, conv4])
     conv6 = Conv2D(512, (3, 3), activation='relu', padding='same')(conv_cat1)
     conv6 = Conv2D(512, (3, 3), activation='relu', padding='same')(conv6)
 
-    conv_transpose2 = Conv2DTranspose(256, (2, 2), padding='same')(conv6)
+    conv_transpose2 = Conv2DTranspose(256, (3, 3), strides=(2, 2), padding='same')(conv6)
     conv_cat2 = Concatenate(axis=3)([conv_transpose2, conv3])
     conv7 = Conv2D(256, (3, 3), activation='relu', padding='same')(conv_cat2)
     conv7 = Conv2D(256, (3, 3), activation='relu', padding='same')(conv7)
 
-    conv_transpose3 = Conv2DTranspose(128, (2, 2), padding='same')(conv7)
+    conv_transpose3 = Conv2DTranspose(128, (3, 3), strides=(2, 2), padding='same')(conv7)
     conv_cat3 = Concatenate(axis=3)([conv_transpose3, conv2])
     conv8 = Conv2D(128, (3, 3), activation='relu', padding='same')(conv_cat3)
     conv8 = Conv2D(128, (3, 3), activation='relu', padding='same')(conv8)
 
-    conv_transpose4 = Conv2DTranspose(64, (2, 2), padding='same')(conv8)
+    conv_transpose4 = Conv2DTranspose(64, (3, 3), strides=(2, 2), padding='same')(conv8)
     conv_cat4 = Concatenate(axis=3)([conv_transpose4, conv1])
     conv9 = Conv2D(64, (3, 3), activation='relu', padding='same')(conv_cat4)
     conv9 = Conv2D(64, (3, 3), activation='relu', padding='same')(conv9)
@@ -63,16 +63,16 @@ def unet_model():
     conv10 = Conv2D(2, (1, 1), activation='sigmoid')(conv9)
 
     model = Model(inputs, conv10)
-    model.compile(optimizer=Adam(lr=1e-5), loss=dice_coef_loss, metrics=[dice_coef])
+    model.compile(optimizer=Adam(lr=1e-5), loss='mse', metrics=["mae"])
 
     return model
 
 
 def dice_coef(y_true, y_pred):
-    y_true_f = Flatten(y_true)
-    y_pred_f = Flatten(y_pred)
-    intersection = tf.keras.sum(y_true_f * y_pred_f)
-    return (2. * intersection + 1) / (tf.keras.sum(y_true_f) + tf.keras.sum(y_pred_f) + 1)
+    y_true_f = K.flatten(y_true)
+    y_pred_f = K.flatten(y_pred)
+    intersection = K.sum(y_true_f * y_pred_f)
+    return (2. * intersection + 1.) / (K.sum(y_true_f) + K.sum(y_pred_f) + 1.)
 
 def dice_coef_loss(y_true, y_pred):
     return -dice_coef(y_true, y_pred)
@@ -114,20 +114,45 @@ def train():
 
     model_checkpoint = ModelCheckpoint('weights.h5', monitor='val_loss', save_best_only=True)
 
+
+    # Add validation data to the training data 
+    # or
+    # Find a way to input validation data separately 
+
     model.fit(train_imgs, 
               train_imgs_mask, 
-              batch_size=32, 
-              nb_epoch=20, 
+              batch_size=16, 
+              epochs=5, 
               verbose=1, 
               shuffle=True, 
               validation_split=0.2, 
               callbacks=[model_checkpoint])
     
-    
 
 
+    test_imgs, test_imgs_mask = load_test_data()
 
-    return 
+    test_imgs = preprocess_images(test_imgs)
+
+    test_imgs = test_imgs.astype('float32')
+
+    mean = np.mean(test_imgs)
+    std = np.std(test_imgs)
+
+    test_imgs -= mean
+    test_imgs /= std
+
+    model.load_weights('weights.h5')
+
+    test_imgs_pred_mask = model.predict(test_imgs, verbose=1)
+    np.save('test_imgs_pred_mask.npy', test_imgs_pred_mask)
+
+    pred_dir = 'preds'
+    if not os.path.exists(pred_dir):
+        os.mkdir(pred_dir)
+    for image, image_id in zip(test_imgs_pred_mask, test_imgs_mask):
+        image = (image[:, :, 0] * 255.).astype(np.uint8)
+        imsave(os.path.join(pred_dir, str(image_id) + '_pred.png'), image)
 
 if __name__ == '__main__':
     train()
